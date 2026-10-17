@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lernplan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>Lernplan</h1>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="uebersicht" role="tab">Übersicht</button>
+      <button class="tab" data-tab="lernen" role="tab">Lernzeit</button>
+      <button class="tab" data-tab="arbeiten" role="tab">Arbeiten</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Übersicht -->
+    <section id="uebersicht" class="panel active">
+      <div class="card next-exam" id="next-exam"></div>
+
+      <div class="stats">
+        <div class="stat"><span class="stat-label">Heute</span><span class="stat-value" id="stat-today">0 h</span></div>
+        <div class="stat"><span class="stat-label">Diese Woche</span><span class="stat-value" id="stat-week">0 h</span></div>
+        <div class="stat"><span class="stat-label">Gesamt</span><span class="stat-value" id="stat-total">0 h</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Lernzeit pro Fach</h2>
+        <div id="subject-bars"></div>
+      </div>
+
+      <div class="card">
+        <h2>Anstehende Arbeiten</h2>
+        <ul class="upcoming" id="upcoming-list"></ul>
+      </div>
+    </section>
+
+    <!-- Lernzeit -->
+    <section id="lernen" class="panel">
+      <form class="card form" id="session-form">
+        <h2>Lerneinheit eintragen</h2>
+        <div class="row">
+          <label>Fach
+            <input type="text" id="session-subject" list="subject-list" required placeholder="z. B. Mathe">
+          </label>
+          <label>Datum
+            <input type="date" id="session-date" required>
+          </label>
+        </div>
+        <div class="row">
+          <label>Stunden
+            <input type="number" id="session-hours" min="0" max="24" step="0.25" required placeholder="1.5">
+          </label>
+          <label>Notiz (optional)
+            <input type="text" id="session-note" placeholder="z. B. Kapitel 3 wiederholt">
+          </label>
+        </div>
+        <button type="submit" class="btn primary">Speichern</button>
+      </form>
+
+      <div class="card">
+        <h2>Tagesablauf</h2>
+        <div id="session-days"></div>
+      </div>
+    </section>
+
+    <!-- Arbeiten -->
+    <section id="arbeiten" class="panel">
+      <form class="card form" id="exam-form">
+        <h2>Arbeit eintragen</h2>
+        <div class="row">
+          <label>Fach
+            <input type="text" id="exam-subject" list="subject-list" required placeholder="z. B. Englisch">
+          </label>
+          <label>Datum
+            <input type="date" id="exam-date" required>
+          </label>
+        </div>
+        <label>Titel (optional)
+          <input type="text" id="exam-title" placeholder="z. B. 2. Klassenarbeit">
+        </label>
+        <label>Themengebiete (eins pro Zeile)
+          <textarea id="exam-topics" rows="3" placeholder="Simple Past&#10;Vokabeln Unit 4"></textarea>
+        </label>
+        <button type="submit" class="btn primary">Arbeit hinzufügen</button>
+      </form>
+
+      <div id="exam-list"></div>
+    </section>
+  </main>
+
+  <datalist id="subject-list"></datalist>
+
+  <footer class="app-footer">
+    <button class="btn link" id="export-btn">Daten exportieren</button>
+    <label class="btn link">Daten importieren
+      <input type="file" id="import-input" accept="application/json" hidden>
+    </label>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
