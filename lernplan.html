@@ -44,7 +44,7 @@ body::before {
   content: ""; position: fixed; inset: 0 0 auto;
   height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg);
 }
-button { font: inherit; color: inherit; }
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 6px; }
 
 main {
@@ -153,6 +153,14 @@ input, textarea, select {
   font: inherit; font-size: 0.95rem; color: var(--fg); background: var(--sunken);
   border: 1px solid transparent; border-radius: 10px; padding: 11px 12px; width: 100%;
 }
+input[type="date"] {
+  -webkit-appearance: none; appearance: none; display: block;
+  min-height: 46px; min-width: 0; text-align: left; line-height: 1.3;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.form-msg { font-size: 0.88rem; font-weight: 500; margin: 0; }
+.form-msg.error { color: var(--neg); }
+.form-msg.ok { color: var(--pos); }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--fg); }
 .btn {
   border: none; border-radius: 999px; padding: 12px 20px; cursor: pointer;
@@ -291,13 +299,14 @@ td:last-child, th:last-child { text-align: right; }
     <h1 class="page-title">Lernzeit</h1>
     <details class="add" id="session-add" open>
       <summary>+ Lerneinheit eintragen</summary>
-      <form class="form" id="session-form">
+      <form class="form" id="session-form" novalidate>
         <div class="form-grid">
           <label class="field">Fach <input type="text" id="session-subject" list="subject-list" required placeholder="z. B. Mathe"></label>
           <label class="field">Datum <input type="date" id="session-date" required></label>
-          <label class="field">Stunden <input type="number" id="session-hours" min="0.25" max="24" step="0.25" required placeholder="1,5"></label>
+          <label class="field">Stunden <input type="text" inputmode="decimal" id="session-hours" required placeholder="1,5" autocomplete="off"></label>
         </div>
         <label class="field">Notiz (optional) <input type="text" id="session-note" placeholder="z. B. Kapitel 3 wiederholt"></label>
+        <p class="form-msg" id="session-form-msg" role="alert" hidden></p>
         <button type="submit" class="btn primary block">Speichern</button>
       </form>
     </details>
@@ -312,7 +321,7 @@ td:last-child, th:last-child { text-align: right; }
     <h1 class="page-title">Arbeiten</h1>
     <details class="add" id="exam-add">
       <summary>+ Arbeit eintragen</summary>
-      <form class="form" id="exam-form">
+      <form class="form" id="exam-form" novalidate>
         <div class="form-grid">
           <label class="field">Fach <input type="text" id="exam-subject" list="subject-list" required placeholder="z. B. Englisch"></label>
           <label class="field">Datum <input type="date" id="exam-date" required></label>
@@ -321,6 +330,7 @@ td:last-child, th:last-child { text-align: right; }
         <label class="field">Themengebiete (eins pro Zeile)
           <textarea id="exam-topics" rows="3" placeholder="Simple Past&#10;Vokabeln Unit 4"></textarea>
         </label>
+        <p class="form-msg" id="exam-form-msg" role="alert" hidden></p>
         <button type="submit" class="btn primary block">Arbeit hinzufügen</button>
       </form>
     </details>
@@ -336,7 +346,7 @@ td:last-child, th:last-child { text-align: right; }
     </div>
     <details class="add" id="grade-add">
       <summary>+ Note eintragen</summary>
-      <form class="form" id="grade-form">
+      <form class="form" id="grade-form" novalidate>
         <div class="form-grid">
           <label class="field">Fach <input type="text" id="grade-subject" list="subject-list" required placeholder="z. B. Mathe"></label>
           <label class="field">Punkte
@@ -354,6 +364,7 @@ td:last-child, th:last-child { text-align: right; }
           <label class="field">Datum <input type="date" id="grade-date" required></label>
         </div>
         <label class="field">Notiz (optional) <input type="text" id="grade-note" placeholder="z. B. Thema Bruchrechnung"></label>
+        <p class="form-msg" id="grade-form-msg" role="alert" hidden></p>
         <button type="submit" class="btn primary block">Note speichern</button>
       </form>
     </details>
@@ -366,7 +377,7 @@ td:last-child, th:last-child { text-align: right; }
 
     <div class="section">
       <div class="section-head"><h2>Ziele</h2><button class="link" id="edit-goals">Bearbeiten</button></div>
-      <form class="form" id="goal-form" hidden style="margin:8px 0 12px">
+      <form class="form" id="goal-form" novalidate hidden style="margin:8px 0 12px">
         <div class="form-grid">
           <label class="field">Gesamtziel pro Woche (Stunden) <input type="number" id="goal-week" min="0.5" max="168" step="0.5" required></label>
           <label class="field">Monatsziel (Stunden) <input type="number" id="goal-month" min="0.5" max="744" step="0.5" required></label>
@@ -1201,6 +1212,14 @@ function renderGrades() {
 
 // ---------- Rendern & Aktionen ----------
 
+function formMsg(formId, text, kind = 'error') {
+  const node = document.getElementById(formId + '-msg');
+  node.textContent = text;
+  node.className = 'form-msg ' + kind;
+  node.hidden = !text;
+  if (text && kind === 'error') node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
 function render() {
   document.getElementById('example-banner').hidden = !state.example;
   const subjects = new Set([...state.sessions, ...state.exams, ...state.grades].map((x) => x.subject));
@@ -1232,14 +1251,17 @@ document.getElementById('session-form').addEventListener('submit', (ev) => {
   ev.preventDefault();
   const subject = document.getElementById('session-subject').value.trim();
   const date = document.getElementById('session-date').value;
-  const h = parseFloat(document.getElementById('session-hours').value);
+  const h = parseFloat(document.getElementById('session-hours').value.replace(',', '.'));
   const note = document.getElementById('session-note').value.trim();
-  if (!subject || !date || !(h > 0)) return;
+  if (!subject) return formMsg('session-form', 'Bitte ein Fach eingeben.');
+  if (!date) return formMsg('session-form', 'Bitte ein Datum wählen.');
+  if (!(h > 0) || h > 24) return formMsg('session-form', 'Bitte die Stunden eingeben, z. B. 1,5.');
   state.sessions.push({ id: uid(), subject, date, hours: h, note });
   markReal();
   commit();
   document.getElementById('session-hours').value = '';
   document.getElementById('session-note').value = '';
+  formMsg('session-form', `Gespeichert: ${subject}, ${hours(h)}.`, 'ok');
 });
 
 document.getElementById('exam-form').addEventListener('submit', (ev) => {
@@ -1249,12 +1271,14 @@ document.getElementById('exam-form').addEventListener('submit', (ev) => {
   const title = document.getElementById('exam-title').value.trim();
   const topics = document.getElementById('exam-topics').value
     .split('\n').map((t) => t.trim()).filter(Boolean).map((name) => ({ id: uid(), name, done: false }));
-  if (!subject || !date) return;
+  if (!subject) return formMsg('exam-form', 'Bitte ein Fach eingeben.');
+  if (!date) return formMsg('exam-form', 'Bitte das Datum der Arbeit wählen.');
   state.exams.push({ id: uid(), subject, date, title, topics });
   markReal();
   commit();
   ev.target.reset();
-  document.getElementById('exam-add').open = false;
+  document.getElementById('exam-date').value = addDays(todayISO(), 7);
+  formMsg('exam-form', `Gespeichert: ${subject} am ${fmtDate(date, { day: 'numeric', month: 'long' })}. Die Arbeit steht unten in der Liste.`, 'ok');
 });
 
 document.getElementById('grade-form').addEventListener('submit', (ev) => {
@@ -1262,7 +1286,9 @@ document.getElementById('grade-form').addEventListener('submit', (ev) => {
   const subject = document.getElementById('grade-subject').value.trim();
   const select = document.getElementById('grade-value');
   const date = document.getElementById('grade-date').value;
-  if (!subject || !select.value || !date) return;
+  if (!subject) return formMsg('grade-form', 'Bitte ein Fach eingeben.');
+  if (!select.value) return formMsg('grade-form', 'Bitte die Punkte wählen.');
+  if (!date) return formMsg('grade-form', 'Bitte ein Datum wählen.');
   state.grades.push({
     id: uid(), subject, date,
     points: parseInt(select.value, 10),
@@ -1274,6 +1300,7 @@ document.getElementById('grade-form').addEventListener('submit', (ev) => {
   commit();
   select.value = '';
   document.getElementById('grade-note').value = '';
+  formMsg('grade-form', `Gespeichert: ${subject}.`, 'ok');
 });
 
 // Ziele
@@ -1302,6 +1329,8 @@ document.getElementById('edit-goals').addEventListener('click', () => {
   document.getElementById('goal-week').focus();
 });
 document.getElementById('cancel-goals').addEventListener('click', () => { goalForm.hidden = true; });
+['session-form', 'exam-form', 'grade-form'].forEach((id) =>
+  document.getElementById(id).addEventListener('input', () => formMsg(id, '')));
 goalForm.addEventListener('submit', (ev) => {
   ev.preventDefault();
   const week = parseFloat(document.getElementById('goal-week').value);
@@ -1384,6 +1413,7 @@ document.getElementById('grade-value').replaceChildren(
   ...Array.from({ length: 16 }, (_, i) => 15 - i).map((p) => el('option', { value: p }, `${p} Punkte (Note ${noteFor(p)})`)));
 document.getElementById('session-date').value = todayISO();
 document.getElementById('grade-date').value = todayISO();
+document.getElementById('exam-date').value = addDays(todayISO(), 7);
 if (state.sessions.length) document.getElementById('session-add').open = false;
 let startTab = 'uebersicht';
 try { startTab = localStorage.getItem(STORAGE_KEY + '-tab') || 'uebersicht'; } catch (e) {}
