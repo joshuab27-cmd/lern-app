@@ -1,0 +1,1393 @@
+<title>Lernplan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: eine schmale, ruhige Spalte wie eine Depot-App – große Kennzahl, Linienchart,
+   Zeilen mit Haarlinien statt Karten, Navigation unten. Schwarz/Weiß, Grün/Rot nur für Richtung. */
+:root {
+  --bg: #ffffff;
+  --fg: #0b0b0c;
+  --muted: #6c6c72;
+  --faint: #a4a4aa;
+  --line: #ebebee;
+  --sunken: #f3f3f5;
+  --pos: #0b8a4c;
+  --neg: #d5392d;
+  --pos-soft: #e3f4ea;
+  --neg-soft: #fbe6e4;
+  --on-fg: #ffffff;
+  --font: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --fg: #f5f5f7; --muted: #8e8e94; --faint: #5c5c62; --line: #1d1d20; --sunken: #121214;
+    --pos: #31d07f; --neg: #ff5c50; --pos-soft: #0f2a1c; --neg-soft: #2f1412; --on-fg: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --fg: #f5f5f7; --muted: #8e8e94; --faint: #5c5c62; --line: #1d1d20; --sunken: #121214;
+  --pos: #31d07f; --neg: #ff5c50; --pos-soft: #0f2a1c; --neg-soft: #2f1412; --on-fg: #000000;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font); font-size: 15px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg);
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 6px; }
+
+main {
+  max-width: 640px; margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  padding-block: 20px calc(40px + env(safe-area-inset-bottom, 0px));
+}
+.panel { display: flex; flex-direction: column; gap: 32px; }
+.panel[hidden] { display: none; }
+.page-title { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+
+/* Navigation oben */
+.tabbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px));
+}
+.tabbar-inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tab {
+  background: none; border: none; cursor: pointer; color: var(--faint);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 10px 2px 8px; font-size: 0.72rem; font-weight: 500;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tab.active { color: var(--fg); border-bottom-color: var(--fg); font-weight: 600; }
+input[type="range"] { padding: 0; background: none; accent-color: var(--fg); height: 28px; }
+.slider-row { display: grid; grid-template-columns: minmax(70px, 110px) 1fr 58px; gap: 12px; align-items: center; }
+.slider-row .val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sub-head { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 14px 0 0; }
+.hint { font-size: 0.82rem; color: var(--muted); }
+
+/* Abschnitte & Zeilen */
+.section { display: flex; flex-direction: column; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.section-head h2 { font-size: 1.15rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.section-head .link { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.88rem; padding: 4px 0; }
+.rows { display: flex; flex-direction: column; }
+.row-item {
+  display: flex; align-items: center; gap: 12px; padding: 13px 0;
+  border-bottom: 1px solid var(--line); min-width: 0;
+}
+.row-item:last-child { border-bottom: none; }
+.row-main { flex: 1; min-width: 0; }
+.row-title { font-weight: 500; overflow-wrap: anywhere; }
+.row-sub { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+.row-end { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.row-end .row-sub { font-size: 0.8rem; }
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--sunken); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; color: var(--fg);
+}
+.day-label {
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+  padding: 18px 0 2px; display: flex; justify-content: space-between;
+}
+.day-label:first-child { padding-top: 4px; }
+.empty { color: var(--muted); font-size: 0.92rem; margin: 8px 0; }
+
+/* Kennzahl oben */
+.hero-label { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+.hero-value { font-size: 3rem; font-weight: 600; letter-spacing: -0.035em; line-height: 1.1; margin: 2px 0 4px; }
+.hero-value .unit { font-size: 0.5em; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 4px; }
+.delta { font-size: 0.92rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.delta.pos { color: var(--pos); }
+.delta.neg { color: var(--neg); }
+.delta .ctx { color: var(--muted); font-weight: 400; }
+
+/* Charts */
+.chart { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.chart.scrub { touch-action: none; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ranges { display: flex; gap: 4px; justify-content: space-between; margin-top: 12px; }
+.range {
+  flex: 1; background: none; border: none; border-radius: 999px; cursor: pointer;
+  padding: 7px 0; font-size: 0.85rem; font-weight: 600; color: var(--muted);
+}
+.range.active { background: var(--sunken); color: var(--fg); }
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 5; white-space: nowrap;
+  background: var(--fg); color: var(--on-fg); border-radius: 8px; padding: 5px 9px;
+  font-size: 0.8rem; font-weight: 500; transform: translate(-50%, -100%);
+}
+.tooltip[hidden] { display: none; }
+
+/* Fortschritt */
+.meter { height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; margin-top: 8px; }
+.meter > span { display: block; height: 100%; background: var(--fg); border-radius: 2px; }
+.meter.done > span { background: var(--pos); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600; white-space: nowrap; background: var(--sunken); color: var(--muted);
+}
+.chip.pos { background: var(--pos-soft); color: var(--pos); }
+.chip.neg { background: var(--neg-soft); color: var(--neg); }
+.chip.strong { background: var(--fg); color: var(--on-fg); }
+
+/* Formulare */
+.form { display: flex; flex-direction: column; gap: 12px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; font-weight: 500; color: var(--muted); min-width: 0; }
+input, textarea, select {
+  font: inherit; font-size: 0.95rem; color: var(--fg); background: var(--sunken);
+  border: 1px solid transparent; border-radius: 10px; padding: 11px 12px; width: 100%;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--fg); }
+.btn {
+  border: none; border-radius: 999px; padding: 12px 20px; cursor: pointer;
+  font-weight: 600; background: var(--sunken); color: var(--fg);
+}
+.btn.primary { background: var(--fg); color: var(--on-fg); }
+.btn.danger { background: var(--neg-soft); color: var(--neg); }
+.btn.small { padding: 7px 14px; font-size: 0.85rem; }
+.btn.block { width: 100%; }
+.icon-btn {
+  background: none; border: none; color: var(--faint); cursor: pointer;
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; font-size: 0.9rem;
+}
+.icon-btn:hover { color: var(--neg); background: var(--neg-soft); }
+details.add > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 999px; padding: 12px 20px; font-weight: 600; background: var(--fg); color: var(--on-fg);
+}
+details.add > summary::-webkit-details-marker { display: none; }
+details.add[open] > summary { background: var(--sunken); color: var(--fg); margin-bottom: 16px; }
+
+/* Arbeiten */
+.exam { border-bottom: 1px solid var(--line); padding: 16px 0; display: flex; flex-direction: column; gap: 10px; }
+.exam:last-child { border-bottom: none; }
+.exam.past { opacity: 0.6; }
+.exam-head { display: flex; align-items: flex-start; gap: 12px; }
+.topic { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.topic input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--fg); flex-shrink: 0; padding: 0; }
+.topic label { flex: 1; cursor: pointer; overflow-wrap: anywhere; }
+.topic.done label { text-decoration: line-through; color: var(--muted); }
+.add-topic { display: flex; gap: 8px; }
+.add-topic input { flex: 1; min-width: 0; padding: 9px 12px; }
+.confirm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.9rem; background: var(--neg-soft); padding: 10px 12px; border-radius: 10px; }
+
+/* Noten */
+.grade {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem; background: var(--sunken);
+}
+.grade.g-good { background: var(--pos-soft); color: var(--pos); }
+.grade.g-bad { background: var(--neg-soft); color: var(--neg); }
+
+/* Statistik */
+.seg { display: flex; background: var(--sunken); border-radius: 999px; padding: 3px; }
+.seg button { flex: 1; border: none; background: none; border-radius: 999px; padding: 7px 0; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: var(--muted); }
+.seg button.active { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.period-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0 8px; }
+.period-nav .title { font-weight: 600; text-align: center; flex: 1; }
+.nav-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--sunken); cursor: pointer; font-size: 1rem; }
+.nav-btn:disabled { opacity: 0.35; cursor: default; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.kpi { display: flex; flex-direction: column; gap: 2px; }
+.kpi .k { color: var(--muted); font-size: 0.78rem; }
+.kpi .v { font-size: 1.15rem; font-weight: 600; }
+.goal-block { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.goal-block:last-child { border-bottom: none; }
+.goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.goal-top .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+.goal-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 0.82rem; color: var(--muted); align-items: center; }
+details.table-view summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; }
+td:last-child, th:last-child { text-align: right; }
+
+.sync { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 0.78rem; color: var(--muted); margin: -6px 0 14px; text-align: right; }
+.sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
+.sync.cloud::before { background: var(--pos); }
+.sync.error { color: var(--neg); }
+.sync.error::before { background: var(--neg); }
+.banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--sunken); border-radius: 12px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 20px;
+}
+.backup summary { cursor: pointer; color: var(--muted); font-size: 0.88rem; }
+.backup textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.78rem; }
+.status { font-size: 0.85rem; color: var(--pos); }
+.status.error { color: var(--neg); }
+
+@media (max-width: 400px) {
+  .hero-value { font-size: 2.6rem; }
+}
+</style>
+
+<nav class="tabbar" role="tablist">
+  <div class="tabbar-inner">
+    <button class="tab active" id="tab-uebersicht" data-tab="uebersicht" role="tab">
+      <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>Übersicht</button>
+    <button class="tab" id="tab-lernen" data-tab="lernen" role="tab">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Lernzeit</button>
+    <button class="tab" id="tab-arbeiten" data-tab="arbeiten" role="tab">
+      <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4"/></svg>Arbeiten</button>
+    <button class="tab" id="tab-noten" data-tab="noten" role="tab">
+      <svg viewBox="0 0 24 24"><path d="M6 3.5h9l4 4v13H6z"/><path d="M9.5 12h6M9.5 16h6"/></svg>Noten</button>
+    <button class="tab" id="tab-statistik" data-tab="statistik" role="tab">
+      <svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Statistik</button>
+  </div>
+</nav>
+
+<main>
+  <div class="sync" id="sync-status" role="status">Verbinde mit deinem Konto …</div>
+  <div class="banner" id="example-banner" hidden>
+    <span>Das sind Beispieldaten. Sobald du etwas einträgst, verschwinden sie.</span>
+    <button class="btn small" id="clear-examples">Beispiele entfernen</button>
+  </div>
+
+  <!-- Übersicht -->
+  <section id="uebersicht" class="panel">
+    <div>
+      <div class="hero-label" id="hero-label">Gelernt</div>
+      <div class="hero-value" id="hero-value">0<span class="unit">h</span></div>
+      <div class="delta" id="hero-delta"></div>
+      <div class="chart" id="line-chart" style="margin-top:20px"></div>
+      <div class="ranges" id="ranges"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Ziele</h2><button class="link" data-goto="statistik">Statistik ›</button></div>
+      <div id="home-goals"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Arbeiten</h2><button class="link" data-goto="arbeiten">Alle ›</button></div>
+      <div class="rows" id="home-exams"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Fächer</h2><span class="row-sub" id="subjects-range"></span></div>
+      <div class="rows" id="home-subjects"></div>
+    </div>
+  </section>
+
+  <!-- Lernzeit -->
+  <section id="lernen" class="panel" hidden>
+    <h1 class="page-title">Lernzeit</h1>
+    <details class="add" id="session-add" open>
+      <summary>+ Lerneinheit eintragen</summary>
+      <form class="form" id="session-form">
+        <div class="form-grid">
+          <label class="field">Fach <input type="text" id="session-subject" list="subject-list" required placeholder="z. B. Mathe"></label>
+          <label class="field">Datum <input type="date" id="session-date" required></label>
+          <label class="field">Stunden <input type="number" id="session-hours" min="0.25" max="24" step="0.25" required placeholder="1,5"></label>
+        </div>
+        <label class="field">Notiz (optional) <input type="text" id="session-note" placeholder="z. B. Kapitel 3 wiederholt"></label>
+        <button type="submit" class="btn primary block">Speichern</button>
+      </form>
+    </details>
+    <div class="section">
+      <div class="section-head"><h2>Verlauf</h2></div>
+      <div class="rows" id="session-days"></div>
+    </div>
+  </section>
+
+  <!-- Arbeiten -->
+  <section id="arbeiten" class="panel" hidden>
+    <h1 class="page-title">Arbeiten</h1>
+    <details class="add" id="exam-add">
+      <summary>+ Arbeit eintragen</summary>
+      <form class="form" id="exam-form">
+        <div class="form-grid">
+          <label class="field">Fach <input type="text" id="exam-subject" list="subject-list" required placeholder="z. B. Englisch"></label>
+          <label class="field">Datum <input type="date" id="exam-date" required></label>
+        </div>
+        <label class="field">Titel (optional) <input type="text" id="exam-title" placeholder="z. B. 2. Klassenarbeit"></label>
+        <label class="field">Themengebiete (eins pro Zeile)
+          <textarea id="exam-topics" rows="3" placeholder="Simple Past&#10;Vokabeln Unit 4"></textarea>
+        </label>
+        <button type="submit" class="btn primary block">Arbeit hinzufügen</button>
+      </form>
+    </details>
+    <div id="exam-list"></div>
+  </section>
+
+  <!-- Noten -->
+  <section id="noten" class="panel" hidden>
+    <div>
+      <div class="hero-label">Gesamtschnitt in Punkten</div>
+      <div class="hero-value" id="grade-hero">–</div>
+      <div class="delta" id="grade-sub"></div>
+    </div>
+    <details class="add" id="grade-add">
+      <summary>+ Note eintragen</summary>
+      <form class="form" id="grade-form">
+        <div class="form-grid">
+          <label class="field">Fach <input type="text" id="grade-subject" list="subject-list" required placeholder="z. B. Mathe"></label>
+          <label class="field">Punkte
+            <select id="grade-value" required></select>
+          </label>
+          <label class="field">Art
+            <select id="grade-type">
+              <option>Klassenarbeit</option><option>Test</option><option>Mündlich</option>
+              <option>Referat</option><option>Hausaufgabe</option><option>Sonstiges</option>
+            </select>
+          </label>
+          <label class="field">Gewichtung
+            <select id="grade-weight"><option value="1">einfach</option><option value="2">doppelt</option></select>
+          </label>
+          <label class="field">Datum <input type="date" id="grade-date" required></label>
+        </div>
+        <label class="field">Notiz (optional) <input type="text" id="grade-note" placeholder="z. B. Thema Bruchrechnung"></label>
+        <button type="submit" class="btn primary block">Note speichern</button>
+      </form>
+    </details>
+    <div id="grade-list"></div>
+  </section>
+
+  <!-- Statistik -->
+  <section id="statistik" class="panel" hidden>
+    <h1 class="page-title">Statistik</h1>
+
+    <div class="section">
+      <div class="section-head"><h2>Ziele</h2><button class="link" id="edit-goals">Bearbeiten</button></div>
+      <form class="form" id="goal-form" hidden style="margin:8px 0 12px">
+        <div class="form-grid">
+          <label class="field">Gesamtziel pro Woche (Stunden) <input type="number" id="goal-week" min="0.5" max="168" step="0.5" required></label>
+          <label class="field">Monatsziel (Stunden) <input type="number" id="goal-month" min="0.5" max="744" step="0.5" required></label>
+        </div>
+        <div class="sub-head">Wochenziel pro Fach (0–40 h)</div>
+        <div class="hint">Für jedes Fach, in dem eine Arbeit ansteht. 0 h = kein Ziel.</div>
+        <div class="form" id="subject-goal-inputs"></div>
+        <div class="hint" id="subject-goal-sum"></div>
+        <div style="display:flex;gap:8px">
+          <button type="submit" class="btn primary small">Ziele speichern</button>
+          <button type="button" class="btn small" id="cancel-goals">Abbrechen</button>
+        </div>
+      </form>
+      <div id="stat-goals"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Stunden pro Tag</h2></div>
+      <div class="seg" id="period-seg">
+        <button data-mode="week" class="active">Woche</button>
+        <button data-mode="month">Monat</button>
+      </div>
+      <div class="period-nav">
+        <button class="nav-btn" id="period-prev" aria-label="Vorheriger Zeitraum">‹</button>
+        <div class="title" id="period-title"></div>
+        <button class="nav-btn" id="period-next" aria-label="Nächster Zeitraum">›</button>
+      </div>
+      <div class="chart" id="bar-chart"></div>
+      <div class="kpis" id="period-kpis"></div>
+      <details class="table-view"><summary>Als Tabelle anzeigen</summary><div class="table-wrap" id="period-table"></div></details>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Wochen</h2><span class="row-sub" id="streak"></span></div>
+      <div class="rows" id="week-history"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Monate</h2></div>
+      <div class="rows" id="month-history"></div>
+    </div>
+
+    <details class="backup" id="backup">
+      <summary>Datensicherung · Daten als Text sichern oder wiederherstellen</summary>
+      <div class="form" style="margin-top:12px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <button class="btn small" id="copy-btn">Daten kopieren</button>
+          <label class="btn small">Datei laden <input type="file" id="import-file" accept="application/json,.json" hidden></label>
+          <button class="btn small" id="import-btn">Text übernehmen</button>
+          <span class="status" id="backup-status"></span>
+        </div>
+        <textarea id="backup-text" rows="4" placeholder="Hier erscheinen deine Daten zum Kopieren. Zum Wiederherstellen eine Sicherung einfügen und „Text übernehmen“ drücken."></textarea>
+      </div>
+    </details>
+  </section>
+</main>
+
+
+<datalist id="subject-list"></datalist>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'lernplan-daten-v1';
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const DAY_MS = 86400000;
+
+// ---------- Datum ----------
+
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function todayISO() { return toISO(new Date()); }
+function parseISO(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function addDays(iso, n) {
+  const d = parseISO(iso);
+  d.setDate(d.getDate() + n);
+  return toISO(d);
+}
+function diffDays(a, b) { return Math.round((parseISO(b) - parseISO(a)) / DAY_MS); }
+function daysUntil(iso) { return diffDays(todayISO(), iso); }
+function mondayOf(iso) {
+  const d = parseISO(iso);
+  d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  return toISO(d);
+}
+function monthStart(iso, offset = 0) {
+  const d = parseISO(iso);
+  return toISO(new Date(d.getFullYear(), d.getMonth() + offset, 1));
+}
+function daysInMonth(iso) {
+  const d = parseISO(iso);
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+function isoWeek(iso) {
+  const t = parseISO(iso);
+  t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7);
+  const w1 = new Date(t.getFullYear(), 0, 4);
+  return 1 + Math.round(((t - w1) / DAY_MS - 3 + (w1.getDay() + 6) % 7) / 7);
+}
+function fmtDate(iso, opts) { return parseISO(iso).toLocaleDateString('de-DE', opts); }
+function longDate(iso) { return fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long' }); }
+function shortDate(iso) { return fmtDate(iso, { day: 'numeric', month: 'short' }); }
+function monthName(iso) { return fmtDate(iso, { month: 'long', year: 'numeric' }); }
+function weekRange(mon) {
+  return `${fmtDate(mon, { day: 'numeric', month: 'numeric' })}–${fmtDate(addDays(mon, 6), { day: 'numeric', month: 'numeric' })}`;
+}
+function countdownText(days) {
+  if (days === 0) return 'Heute';
+  if (days === 1) return 'Morgen';
+  if (days === -1) return 'Gestern';
+  if (days < 0) return `vor ${-days} Tagen`;
+  return `in ${days} Tagen`;
+}
+
+// ---------- Zahlen ----------
+
+function num(h, digits = 2) {
+  return (Math.round(h * 100) / 100).toLocaleString('de-DE', { maximumFractionDigits: digits });
+}
+function hours(h) { return num(h) + ' h'; }
+function pct(x) { return Math.round(x * 100).toLocaleString('de-DE') + ' %'; }
+
+// ---------- DOM ----------
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  setAttrs(node, attrs);
+  for (const c of children) if (c != null && c !== false) node.append(c instanceof Node ? c : document.createTextNode(c));
+  return node;
+}
+function svg(tag, attrs = {}, ...children) {
+  const node = document.createElementNS(SVG_NS, tag);
+  setAttrs(node, attrs);
+  for (const c of children) if (c != null && c !== false) node.append(c instanceof Node ? c : document.createTextNode(c));
+  return node;
+}
+function setAttrs(node, attrs) {
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') node.setAttribute('class', v);
+    else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    else if (v === true) node.setAttribute(k, '');
+    else if (v !== false && v != null) node.setAttribute(k, v);
+  }
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// ---------- Daten ----------
+
+function exampleData() {
+  // Gleichbleibende Pseudo-Zufallswerte, damit die Beispiele bei jedem Laden gleich aussehen
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const subjects = ['Mathe', 'Englisch', 'Biologie', 'Deutsch'];
+  const notes = { Mathe: 'Bruchrechnung', Englisch: 'Vokabeln Unit 4', Biologie: 'Zellaufbau', Deutsch: 'Erörterung' };
+  const steps = [0.5, 0.75, 1, 1, 1.25, 1.5, 2];
+  const sessions = [];
+  for (let i = 69; i >= 0; i--) {
+    const date = addDays(todayISO(), -i);
+    if (rand() < 0.22) continue;
+    const n = rand() < 0.45 ? 2 : 1;
+    for (let k = 0; k < n; k++) {
+      const subject = subjects[Math.floor(rand() * subjects.length)];
+      sessions.push({ id: uid(), ex: true, subject, date, hours: steps[Math.floor(rand() * steps.length)], note: rand() < 0.4 ? notes[subject] : '' });
+    }
+  }
+  const t = (name, done) => ({ id: uid(), name, done });
+  const data = {
+    example: true,
+    goals: { week: 10, month: 40, subjects: { Mathe: 4, Englisch: 3 } },
+    sessions,
+    exams: [
+      { id: uid(), subject: 'Mathe', title: 'Klassenarbeit 2', date: addDays(todayISO(), 5),
+        topics: [t('Bruchrechnung', true), t('Gleichungen', false), t('Prozentrechnung', false)] },
+      { id: uid(), subject: 'Englisch', title: 'Vokabeltest', date: addDays(todayISO(), 12),
+        topics: [t('Vokabeln Unit 4', false), t('Simple Past', false)] },
+    ],
+    grades: [
+      { id: uid(), subject: 'Mathe', points: 10, type: 'Klassenarbeit', weight: 2, date: addDays(todayISO(), -30), note: 'Geometrie' },
+      { id: uid(), subject: 'Mathe', points: 11, type: 'Mündlich', weight: 1, date: addDays(todayISO(), -10), note: '' },
+      { id: uid(), subject: 'Englisch', points: 12, type: 'Test', weight: 1, date: addDays(todayISO(), -14), note: 'Vokabeltest Unit 3' },
+      { id: uid(), subject: 'Biologie', points: 8, type: 'Referat', weight: 1, date: addDays(todayISO(), -7), note: 'Zellaufbau' },
+    ],
+  };
+  for (const item of [...data.exams, ...data.grades]) item.ex = true;
+  return data;
+}
+
+function normalizeGoals(goals) {
+  const g = { week: 10, month: 40, subjects: {}, ...(goals || {}) };
+  g.subjects = { ...(g.subjects || {}) };
+  return g;
+}
+// Ältere Einträge hatten Schulnoten (1+ = 0,7 … 6) statt Punkten
+function normalizeGrade(g) {
+  if (typeof g.points === 'number') return g;
+  const points = Math.max(0, Math.min(15, Math.round(17 - 3 * g.value)));
+  const { value, label, ...rest } = g;
+  return { ...rest, points };
+}
+
+function normalizeState(d) {
+  return {
+    example: false,
+    goals: normalizeGoals(d.goals),
+    sessions: Array.isArray(d.sessions) ? d.sessions : [],
+    exams: Array.isArray(d.exams) ? d.exams : [],
+    grades: (Array.isArray(d.grades) ? d.grades : []).map(normalizeGrade),
+  };
+}
+
+// Schneller Start aus dem Browser-Zwischenspeicher; das Konto ist danach maßgeblich
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (!d.example) return normalizeState(d);
+    }
+  } catch (e) { /* Speicher nicht verfügbar */ }
+  return exampleData();
+}
+
+function cloudBody() {
+  return { version: 1, goals: state.goals, sessions: state.sessions, exams: state.exams, grades: state.grades };
+}
+
+let storageOk = true;
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); storageOk = true; }
+  catch (e) { storageOk = false; }
+  pushCloud();
+}
+
+// ---------- Speichern im Konto ----------
+
+const cloud = { ref: null, writing: false, dirty: false, last: '' };
+
+function setSync(mode, text) {
+  const node = document.getElementById('sync-status');
+  node.className = 'sync ' + mode;
+  node.textContent = text;
+}
+
+async function pushCloud() {
+  if (!cloud.ref || state.example) return;
+  if (cloud.writing) { cloud.dirty = true; return; }
+  cloud.writing = true;
+  setSync('saving', 'Speichert …');
+  try {
+    do {
+      cloud.dirty = false;
+      const body = cloudBody();
+      const json = JSON.stringify(body);
+      if (json !== cloud.last) {
+        await cloud.ref.set(body);
+        cloud.last = json;
+      }
+    } while (cloud.dirty);
+    setSync('cloud', 'In deinem Konto gespeichert');
+  } catch (e) {
+    setSync('error', e && e.code === 'quota_exceeded'
+      ? 'Speicher voll. Lösche alte Einträge, damit wieder gespeichert wird.'
+      : 'Speichern fehlgeschlagen. Deine Änderung ist vorerst nur in diesem Browser.');
+  } finally {
+    cloud.writing = false;
+  }
+}
+
+function applyRemote(data) {
+  Object.assign(state, normalizeState(data));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  render();
+}
+
+async function initCloud() {
+  const use = window.claude && window.claude.use;
+  const [db, user] = use ? await Promise.all([window.claude.use('db'), window.claude.use('user')]) : [null, null];
+  const id = user ? await user.id() : null;
+  if (!db || !id) {
+    setSync('local', 'Nur in diesem Browser gespeichert. Melde dich an, um im Konto zu speichern.');
+    return;
+  }
+  const ref = db.doc(`data/users/${id}/lernplan`);
+  try {
+    const snap = await ref.get();
+    cloud.ref = ref;
+    if (snap.exists) {
+      cloud.last = JSON.stringify(snap.data());
+      applyRemote(snap.data());
+      setSync('cloud', 'In deinem Konto gespeichert');
+    } else if (!state.example) {
+      await pushCloud(); // Einträge aus diesem Browser ins Konto übernehmen
+    } else {
+      setSync('cloud', 'Wird in deinem Konto gespeichert, sobald du etwas einträgst');
+    }
+  } catch (e) {
+    cloud.ref = null;
+    setSync('local', 'Konto gerade nicht erreichbar. Änderungen bleiben vorerst in diesem Browser.');
+    return;
+  }
+  // Änderungen von anderen Geräten übernehmen
+  ref.onSnapshot((snap) => {
+    if (!snap.exists || snap.metadata.hasPendingWrites || cloud.writing) return;
+    const json = JSON.stringify(snap.data());
+    if (json === cloud.last) return;
+    cloud.last = json;
+    applyRemote(snap.data());
+  }, () => {});
+}
+
+const state = loadData();
+const ui = { range: '1W', mode: 'week', offset: 0, pendingDelete: null };
+try { ui.range = localStorage.getItem(STORAGE_KEY + '-range') || '1W'; } catch (e) {}
+
+// Beim ersten eigenen Eintrag verschwinden die Beispieldaten
+function markReal() {
+  if (!state.example) return;
+  state.example = false;
+  state.sessions = state.sessions.filter((x) => !x.ex);
+  state.exams = state.exams.filter((x) => !x.ex);
+  state.grades = state.grades.filter((x) => !x.ex);
+  state.goals.subjects = {};
+}
+
+function hoursByDay() {
+  const map = {};
+  for (const s of state.sessions) map[s.date] = (map[s.date] || 0) + s.hours;
+  return map;
+}
+function sumRange(map, from, to) {
+  let total = 0;
+  for (const [d, h] of Object.entries(map)) if (d >= from && d <= to) total += h;
+  return total;
+}
+
+// ---------- Übersicht ----------
+
+const RANGES = [
+  { key: '1W', label: '1W', days: 7, ctx: 'vs. Vorwoche' },
+  { key: '1M', label: '1M', days: 30, ctx: 'vs. vorige 30 Tage' },
+  { key: '3M', label: '3M', days: 91, ctx: 'vs. vorige 3 Monate' },
+  { key: '1J', label: '1J', days: 365, ctx: 'vs. Vorjahr' },
+  { key: 'MAX', label: 'Max', days: null, ctx: '' },
+];
+
+function renderHome() {
+  const map = hoursByDay();
+  const today = todayISO();
+  const range = RANGES.find((r) => r.key === ui.range) || RANGES[0];
+  const first = Object.keys(map).sort()[0] || today;
+  const days = range.days || Math.max(7, diffDays(first, today) + 1);
+  const start = addDays(today, -(days - 1));
+
+  const series = [];
+  let cum = 0;
+  for (let i = 0; i < days; i++) {
+    const date = addDays(start, i);
+    const h = map[date] || 0;
+    cum += h;
+    series.push({ date, h, cum });
+  }
+  const total = cum;
+  const prev = range.days ? sumRange(map, addDays(start, -days), addDays(start, -1)) : 0;
+  const trendUp = !range.days || total >= prev;
+
+  const label = document.getElementById('hero-label');
+  const value = document.getElementById('hero-value');
+  const delta = document.getElementById('hero-delta');
+  const labelText = range.days ? `Gelernt · letzte ${range.days === 7 ? '7 Tage' : range.days === 365 ? '12 Monate' : range.days === 91 ? '3 Monate' : '30 Tage'}` : 'Gelernt · insgesamt';
+
+  const showTotal = () => {
+    label.textContent = labelText;
+    value.replaceChildren(num(total), el('span', { class: 'unit' }, 'h'));
+    if (range.days) {
+      const diff = total - prev;
+      delta.className = 'delta ' + (diff >= 0 ? 'pos' : 'neg');
+      delta.replaceChildren(
+        `${diff >= 0 ? '▲' : '▼'} ${hours(Math.abs(diff))}${prev > 0 ? ` (${pct(Math.abs(diff) / prev)})` : ''} `,
+        el('span', { class: 'ctx' }, range.ctx));
+    } else {
+      delta.className = 'delta';
+      delta.replaceChildren(el('span', { class: 'ctx' }, `seit ${fmtDate(first, { day: 'numeric', month: 'long', year: 'numeric' })}`));
+    }
+  };
+  const showPoint = (p) => {
+    label.textContent = longDate(p.date);
+    value.replaceChildren(num(p.cum), el('span', { class: 'unit' }, 'h'));
+    delta.className = 'delta';
+    delta.replaceChildren(el('span', { class: 'ctx' }, p.h ? `${hours(p.h)} an diesem Tag gelernt` : 'An diesem Tag nicht gelernt'));
+  };
+  showTotal();
+  drawLineChart(document.getElementById('line-chart'), series, trendUp ? 'var(--pos)' : 'var(--neg)', showPoint, showTotal);
+
+  document.getElementById('ranges').replaceChildren(...RANGES.map((r) =>
+    el('button', { class: 'range' + (r.key === range.key ? ' active' : ''), onclick: () => {
+      ui.range = r.key;
+      try { localStorage.setItem(STORAGE_KEY + '-range', r.key); } catch (e) {}
+      renderHome();
+    } }, r.label)));
+
+  // Ziele
+  const mon = mondayOf(today);
+  const ms = monthStart(today);
+  document.getElementById('home-goals').replaceChildren(...goalBlocks(map));
+
+  // Arbeiten
+  const upcoming = upcomingExams();
+  document.getElementById('home-exams').replaceChildren(...(upcoming.length
+    ? upcoming.slice(0, 4).map((e) => {
+        const p = examProgress(e);
+        const d = daysUntil(e.date);
+        return el('div', { class: 'row-item' },
+          el('div', { class: 'avatar' }, e.subject.slice(0, 2)),
+          el('div', { class: 'row-main' },
+            el('div', { class: 'row-title' }, e.subject + (e.title ? ` · ${e.title}` : '')),
+            el('div', { class: 'row-sub' }, fmtDate(e.date, { weekday: 'short', day: 'numeric', month: 'short' }) + (p.total ? ` · ${p.done}/${p.total} Themen` : ''))),
+          el('div', { class: 'row-end' }, el('span', { class: 'chip' + (d <= 3 ? ' strong' : '') }, countdownText(d))));
+      })
+    : [el('p', { class: 'empty' }, 'Keine anstehenden Arbeiten.')]));
+
+  // Fächer im gewählten Zeitraum
+  const bySubject = {};
+  for (const s of state.sessions) if (s.date >= start && s.date <= today) bySubject[s.subject] = (bySubject[s.subject] || 0) + s.hours;
+  const entries = Object.entries(bySubject).sort((a, b) => b[1] - a[1]);
+  document.getElementById('subjects-range').textContent = range.days ? `Zeitraum ${range.label}` : 'Gesamt';
+  document.getElementById('home-subjects').replaceChildren(...(entries.length
+    ? entries.map(([subject, h]) => el('div', { class: 'row-item' },
+        el('div', { class: 'avatar' }, subject.slice(0, 2)),
+        el('div', { class: 'row-main' }, el('div', { class: 'row-title' }, subject)),
+        el('div', { class: 'row-end' },
+          el('div', { class: 'row-title' }, hours(h)),
+          el('div', { class: 'row-sub' }, pct(h / total) + ' Anteil'))))
+    : [el('p', { class: 'empty' }, 'In diesem Zeitraum noch keine Lernzeit.')]));
+}
+
+// Fächer, für die man ein Wochenziel setzen kann: anstehende Arbeiten plus Fächer mit bestehendem Ziel
+function goalSubjects() {
+  const set = new Set(upcomingExams().map((e) => e.subject));
+  for (const [s, h] of Object.entries(state.goals.subjects)) if (h > 0) set.add(s);
+  return [...set].sort((a, b) => a.localeCompare(b, 'de'));
+}
+
+function goalBlocks(map) {
+  const today = todayISO();
+  const mon = mondayOf(today);
+  const ms = monthStart(today);
+  const weekLeft = diffDays(today, addDays(mon, 6));
+  const blocks = [
+    goalBlock('Gesamtziel', `KW ${isoWeek(today)}`, sumRange(map, mon, today), state.goals.week, weekLeft),
+    goalBlock('Monatsziel', monthName(today), sumRange(map, ms, today), state.goals.month, daysInMonth(today) - parseISO(today).getDate()),
+  ];
+  const subjects = goalSubjects().filter((s) => state.goals.subjects[s] > 0);
+  if (subjects.length) {
+    const doneBy = {};
+    for (const s of state.sessions) if (s.date >= mon && s.date <= today) doneBy[s.subject] = (doneBy[s.subject] || 0) + s.hours;
+    blocks.push(el('div', { class: 'sub-head' }, 'Fächer diese Woche'));
+    for (const s of subjects) blocks.push(goalBlock(s, '', doneBy[s] || 0, state.goals.subjects[s], weekLeft));
+  }
+  return blocks;
+}
+
+function goalBlock(title, sub, done, goal, daysLeft) {
+  const reached = done >= goal;
+  const rest = Math.max(0, goal - done);
+  return el('div', { class: 'goal-block' },
+    el('div', { class: 'goal-top' },
+      el('div', {}, el('span', { class: 'row-title' }, title), ' ', el('span', { class: 'row-sub' }, sub)),
+      el('div', { class: 'v' }, `${num(done)} / ${num(goal)} h`)),
+    el('div', { class: 'meter' + (reached ? ' done' : '') }, el('span', { style: `width:${Math.min(100, (done / goal) * 100)}%` })),
+    el('div', { class: 'goal-foot' },
+      el('span', {}, reached ? 'Ziel erreicht' : `Noch ${hours(rest)}` + (daysLeft > 0 ? ` · ${num(rest / (daysLeft + 1), 1)} h pro Tag` : ' · heute letzter Tag')),
+      reached ? el('span', { class: 'chip pos' }, '✓ Erreicht') : el('span', { class: 'row-sub' }, pct(Math.min(1, done / goal)))));
+}
+
+function drawLineChart(container, series, color, onPoint, onLeave) {
+  const W = Math.max(280, container.clientWidth || 600);
+  const H = 190;
+  const padT = 14, padB = 10, padX = 6;
+  const max = Math.max(1, series[series.length - 1].cum) * 1.06;
+  const x = (i) => padX + (series.length === 1 ? (W - 2 * padX) / 2 : (i / (series.length - 1)) * (W - 2 * padX));
+  const y = (v) => padT + (1 - v / max) * (H - padT - padB);
+
+  const d = series.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.cum).toFixed(1)}`).join('');
+  const last = series.length - 1;
+  const cross = svg('line', { x1: 0, x2: 0, y1: 0, y2: H, stroke: 'var(--faint)', 'stroke-width': 1, visibility: 'hidden' });
+  const dot = svg('circle', { r: 5, fill: color, stroke: 'var(--bg)', 'stroke-width': 2, cx: x(last), cy: y(series[last].cum) });
+
+  const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img', 'aria-label': 'Verlauf der gelernten Stunden' },
+    svg('line', { x1: 0, x2: W, y1: y(0), y2: y(0), stroke: 'var(--line)', 'stroke-width': 1 }),
+    svg('path', { d, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
+    cross, dot);
+
+  const pick = (ev) => {
+    const rect = root.getBoundingClientRect();
+    const px = ((ev.clientX - rect.left) / rect.width) * W;
+    const i = Math.max(0, Math.min(last, Math.round(((px - padX) / (W - 2 * padX)) * last)));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+    cross.setAttribute('visibility', 'visible');
+    dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(series[i].cum));
+    onPoint(series[i]);
+  };
+  const reset = () => {
+    container.classList.remove('scrub');
+    cross.setAttribute('visibility', 'hidden');
+    dot.setAttribute('cx', x(last)); dot.setAttribute('cy', y(series[last].cum));
+    onLeave();
+  };
+  root.addEventListener('pointerdown', (ev) => { container.classList.add('scrub'); pick(ev); });
+  root.addEventListener('pointermove', (ev) => { if (ev.pointerType === 'mouse' || container.classList.contains('scrub')) pick(ev); });
+  root.addEventListener('pointerleave', reset);
+  root.addEventListener('pointerup', (ev) => { if (ev.pointerType !== 'mouse') reset(); });
+  root.addEventListener('pointercancel', reset);
+  container.replaceChildren(root);
+}
+
+// ---------- Statistik ----------
+
+function periodDays() {
+  const today = todayISO();
+  if (ui.mode === 'week') {
+    const mon = addDays(mondayOf(today), ui.offset * 7);
+    return {
+      days: Array.from({ length: 7 }, (_, i) => addDays(mon, i)),
+      title: `KW ${isoWeek(mon)} · ${weekRange(mon)}`,
+      goal: state.goals.week,
+      label: (iso) => fmtDate(iso, { weekday: 'short' }).replace('.', ''),
+    };
+  }
+  const ms = monthStart(today, ui.offset);
+  const n = daysInMonth(ms);
+  return {
+    days: Array.from({ length: n }, (_, i) => addDays(ms, i)),
+    title: monthName(ms),
+    goal: state.goals.month,
+    label: (iso) => { const d = parseISO(iso).getDate(); return d === 1 || d % 5 === 0 ? String(d) : ''; },
+  };
+}
+
+function niceStep(max) {
+  for (const s of [0.5, 1, 2, 3, 4, 5, 10]) if (max / s <= 4) return s;
+  return 20;
+}
+
+function renderStats() {
+  const map = hoursByDay();
+  const today = todayISO();
+
+  // Ziele
+  const mon = mondayOf(today);
+  const ms = monthStart(today);
+  document.getElementById('stat-goals').replaceChildren(...goalBlocks(map));
+
+  // Stunden pro Tag
+  const p = periodDays();
+  document.getElementById('period-title').textContent = p.title;
+  document.getElementById('period-next').disabled = ui.offset >= 0;
+  document.querySelectorAll('#period-seg button').forEach((b) => b.classList.toggle('active', b.dataset.mode === ui.mode));
+  const values = p.days.map((d) => ({ date: d, h: map[d] || 0, future: d > today }));
+  const dailyGoal = p.goal / p.days.length;
+  drawBarChart(document.getElementById('bar-chart'), values, dailyGoal, p.label);
+
+  const total = values.reduce((a, v) => a + v.h, 0);
+  const elapsed = values.filter((v) => !v.future).length || 1;
+  const learnDays = values.filter((v) => v.h > 0).length;
+  const reached = total >= p.goal;
+  const finished = !values.some((v) => v.date >= today);
+  document.getElementById('period-kpis').replaceChildren(
+    el('div', { class: 'kpi' }, el('span', { class: 'k' }, 'Summe'), el('span', { class: 'v' }, hours(total))),
+    el('div', { class: 'kpi' }, el('span', { class: 'k' }, 'Ø pro Tag'), el('span', { class: 'v' }, hours(total / elapsed))),
+    el('div', { class: 'kpi' }, el('span', { class: 'k' }, 'Ziel ' + hours(p.goal)),
+      el('span', { class: 'v' }, reached
+        ? el('span', { class: 'chip pos' }, '✓ Erreicht')
+        : finished ? el('span', { class: 'chip neg' }, '✗ Verfehlt') : el('span', { class: 'chip' }, `${learnDays} ${learnDays === 1 ? 'Lerntag' : 'Lerntage'}`))));
+
+  document.getElementById('period-table').replaceChildren(el('table', {},
+    el('thead', {}, el('tr', {}, el('th', {}, 'Tag'), el('th', {}, 'Stunden'))),
+    el('tbody', {}, ...values.filter((v) => !v.future).map((v) =>
+      el('tr', {}, el('td', {}, fmtDate(v.date, { weekday: 'short', day: 'numeric', month: 'short' })), el('td', {}, num(v.h)))))));
+
+  // Wochenverlauf
+  // Verlauf erst ab dem ersten Eintrag zeigen
+  const first = Object.keys(map).sort()[0] || today;
+  const weeks = [];
+  for (let i = 0; i < 8; i++) {
+    const m = addDays(mon, -7 * i);
+    if (i > 0 && addDays(m, 6) < first) break;
+    weeks.push({ start: m, end: addDays(m, 6), h: sumRange(map, m, addDays(m, 6)), current: i === 0 });
+  }
+  let streak = 0;
+  for (const w of weeks) {
+    if (w.h >= state.goals.week) streak++;
+    else if (!w.current) break;
+  }
+  document.getElementById('streak').textContent = streak ? `${streak} ${streak === 1 ? 'Woche' : 'Wochen'} in Folge erreicht` : '';
+  document.getElementById('week-history').replaceChildren(...weeks.map((w) =>
+    historyRow(`KW ${isoWeek(w.start)}`, weekRange(w.start), w.h, state.goals.week, w.current)));
+
+  // Monatsverlauf
+  const months = [];
+  for (let i = 0; i < 6; i++) {
+    const s = monthStart(today, -i);
+    if (i > 0 && addDays(s, daysInMonth(s) - 1) < first) break;
+    months.push({ start: s, h: sumRange(map, s, addDays(s, daysInMonth(s) - 1)), current: i === 0 });
+  }
+  document.getElementById('month-history').replaceChildren(...months.map((m) =>
+    historyRow(fmtDate(m.start, { month: 'long' }), String(parseISO(m.start).getFullYear()), m.h, state.goals.month, m.current)));
+}
+
+function historyRow(title, sub, h, goal, current) {
+  const reached = h >= goal;
+  const chip = reached ? el('span', { class: 'chip pos' }, '✓ Erreicht')
+    : current ? el('span', { class: 'chip' }, 'Läuft')
+    : el('span', { class: 'chip neg' }, '✗ Verfehlt');
+  return el('div', { class: 'row-item' },
+    el('div', { class: 'row-main' },
+      el('div', { class: 'row-title' }, title),
+      el('div', { class: 'row-sub' }, sub)),
+    el('div', { class: 'row-end' },
+      el('div', { class: 'row-title' }, `${num(h)} / ${num(goal)} h`),
+      el('div', { style: 'margin-top:3px' }, chip)));
+}
+
+function drawBarChart(container, values, dailyGoal, label) {
+  const W = Math.max(280, container.clientWidth || 600);
+  const H = 200;
+  const padL = 30, padR = 4, padT = 16, padB = 24;
+  const maxVal = Math.max(dailyGoal, ...values.map((v) => v.h), 0.5);
+  const step = niceStep(maxVal);
+  const top = Math.ceil((maxVal * 1.1) / step) * step;
+  const band = (W - padL - padR) / values.length;
+  const bw = Math.min(24, band * 0.62);
+  const y = (v) => padT + (1 - v / top) * (H - padT - padB);
+  const tooltip = el('div', { class: 'tooltip', hidden: true });
+
+  const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img', 'aria-label': 'Gelernte Stunden pro Tag' });
+  for (let t = 0; t <= top + 1e-9; t += step) {
+    root.append(
+      svg('line', { x1: padL, x2: W - padR, y1: y(t), y2: y(t), stroke: 'var(--line)', 'stroke-width': 1 }),
+      svg('text', { x: padL - 6, y: y(t) + 4, 'text-anchor': 'end' }, num(t, 1)));
+  }
+  values.forEach((v, i) => {
+    const cx = padL + band * i + band / 2;
+    const lab = label(v.date);
+    if (lab) root.append(svg('text', { x: cx, y: H - 6, 'text-anchor': 'middle', style: v.date === todayISO() ? 'fill:var(--fg);font-weight:600' : '' }, lab));
+    if (v.h > 0) {
+      const x0 = cx - bw / 2, y0 = y(v.h), y1 = y(0), r = Math.min(4, bw / 2, y1 - y0);
+      root.append(svg('path', {
+        d: `M${x0},${y1}V${y0 + r}Q${x0},${y0} ${x0 + r},${y0}H${x0 + bw - r}Q${x0 + bw},${y0} ${x0 + bw},${y0 + r}V${y1}Z`,
+        fill: 'var(--fg)',
+      }));
+    }
+    // Trefferfläche größer als der Balken
+    root.append(svg('rect', {
+      x: padL + band * i, y: padT, width: band, height: H - padT - padB, fill: 'transparent',
+      onpointerenter: () => {
+        if (v.future) return;
+        tooltip.textContent = `${fmtDate(v.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${hours(v.h)}`;
+        tooltip.style.left = `${(cx / W) * 100}%`;
+        tooltip.style.top = `${(Math.min(y(v.h), y(dailyGoal)) / H) * 100}%`;
+        tooltip.style.marginTop = '-8px';
+        tooltip.hidden = false;
+      },
+      onpointerleave: () => { tooltip.hidden = true; },
+    }));
+  });
+  const gy = y(dailyGoal);
+  root.append(
+    svg('line', { x1: padL, x2: W - padR, y1: gy, y2: gy, stroke: 'var(--pos)', 'stroke-width': 1.5, 'stroke-dasharray': '4 4', 'pointer-events': 'none' }),
+    svg('text', { x: W - padR, y: gy - 6, 'text-anchor': 'end', style: 'fill:var(--pos);font-weight:600', 'pointer-events': 'none' }, `Ziel ${num(dailyGoal, 1)} h/Tag`));
+  container.replaceChildren(root, tooltip);
+}
+
+// ---------- Lernzeit ----------
+
+function renderSessions() {
+  const container = document.getElementById('session-days');
+  if (!state.sessions.length) {
+    container.replaceChildren(el('p', { class: 'empty' }, 'Noch keine Lerneinheiten eingetragen.'));
+    return;
+  }
+  const byDay = {};
+  for (const s of state.sessions) (byDay[s.date] ||= []).push(s);
+  const nodes = [];
+  for (const day of Object.keys(byDay).sort().reverse()) {
+    const items = byDay[day];
+    const total = items.reduce((a, s) => a + s.hours, 0);
+    nodes.push(el('div', { class: 'day-label' },
+      el('span', {}, day === todayISO() ? 'Heute' : day === addDays(todayISO(), -1) ? 'Gestern' : fmtDate(day, { weekday: 'long', day: 'numeric', month: 'long' })),
+      el('span', {}, hours(total))));
+    for (const s of items) {
+      nodes.push(el('div', { class: 'row-item' },
+        el('div', { class: 'avatar' }, s.subject.slice(0, 2)),
+        el('div', { class: 'row-main' },
+          el('div', { class: 'row-title' }, s.subject),
+          s.note ? el('div', { class: 'row-sub' }, s.note) : null),
+        el('div', { class: 'row-end row-title' }, hours(s.hours)),
+        el('button', { class: 'icon-btn', title: 'Löschen', 'aria-label': 'Lerneinheit löschen',
+          onclick: () => { state.sessions = state.sessions.filter((x) => x.id !== s.id); commit(); } }, '✕')));
+    }
+  }
+  container.replaceChildren(...nodes);
+}
+
+// ---------- Arbeiten ----------
+
+function sortedExams() { return [...state.exams].sort((a, b) => a.date.localeCompare(b.date)); }
+function upcomingExams() { return sortedExams().filter((e) => daysUntil(e.date) >= 0); }
+function examProgress(exam) {
+  const total = exam.topics.length;
+  const done = exam.topics.filter((t) => t.done).length;
+  return { total, done, ratio: total ? done / total : 0 };
+}
+
+function renderExams() {
+  const container = document.getElementById('exam-list');
+  const exams = sortedExams();
+  if (!exams.length) {
+    container.replaceChildren(el('p', { class: 'empty' }, 'Noch keine Arbeiten eingetragen.'));
+    return;
+  }
+  const upcoming = exams.filter((e) => daysUntil(e.date) >= 0);
+  const past = exams.filter((e) => daysUntil(e.date) < 0).reverse();
+  container.replaceChildren(
+    el('div', { class: 'section' },
+      el('div', { class: 'section-head' }, el('h2', {}, 'Anstehend')),
+      ...(upcoming.length ? upcoming.map(examCard) : [el('p', { class: 'empty' }, 'Keine anstehenden Arbeiten.')])));
+  if (past.length) {
+    container.append(el('div', { class: 'section', style: 'margin-top:28px' },
+      el('div', { class: 'section-head' }, el('h2', {}, 'Vergangen')), ...past.map(examCard)));
+  }
+}
+
+function examCard(exam) {
+  const days = daysUntil(exam.date);
+  const p = examProgress(exam);
+  const input = el('input', { type: 'text', id: `new-topic-${exam.id}`, placeholder: 'Neues Themengebiet' });
+  return el('div', { class: 'exam' + (days < 0 ? ' past' : '') },
+    el('div', { class: 'exam-head' },
+      el('div', { class: 'avatar' }, exam.subject.slice(0, 2)),
+      el('div', { class: 'row-main' },
+        el('div', { class: 'row-title' }, exam.subject + (exam.title ? ` · ${exam.title}` : '')),
+        el('div', { class: 'row-sub' }, fmtDate(exam.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))),
+      el('div', { class: 'row-end' },
+        el('span', { class: 'chip' + (days >= 0 && days <= 3 ? ' strong' : '') }, countdownText(days))),
+      el('button', { class: 'icon-btn', title: 'Arbeit löschen', 'aria-label': 'Arbeit löschen',
+        onclick: () => { ui.pendingDelete = exam.id; renderExams(); } }, '✕')),
+    ui.pendingDelete === exam.id
+      ? el('div', { class: 'confirm-row' },
+          el('span', {}, 'Diese Arbeit mit allen Themen löschen?'),
+          el('button', { class: 'btn small danger', onclick: () => {
+            state.exams = state.exams.filter((e) => e.id !== exam.id); ui.pendingDelete = null; commit();
+          } }, 'Löschen'),
+          el('button', { class: 'btn small', onclick: () => { ui.pendingDelete = null; renderExams(); } }, 'Abbrechen'))
+      : null,
+    p.total
+      ? el('div', {},
+          el('div', { class: 'goal-foot', style: 'margin-top:0' },
+            el('span', {}, `${p.done} von ${p.total} Themen gelernt`),
+            p.done === p.total ? el('span', { class: 'chip pos' }, '✓ Alles gelernt') : el('span', {}, pct(p.ratio))),
+          el('div', { class: 'meter' + (p.done === p.total ? ' done' : '') }, el('span', { style: `width:${p.ratio * 100}%` })))
+      : null,
+    exam.topics.length
+      ? el('div', {}, ...exam.topics.map((t) => {
+          const id = `topic-${t.id}`;
+          return el('div', { class: 'topic' + (t.done ? ' done' : '') },
+            el('input', { type: 'checkbox', id, checked: t.done, onchange: (ev) => { t.done = ev.target.checked; commit(); } }),
+            el('label', { for: id }, t.name),
+            el('button', { class: 'icon-btn', title: 'Thema löschen', 'aria-label': 'Thema löschen',
+              onclick: () => { exam.topics = exam.topics.filter((x) => x.id !== t.id); commit(); } }, '✕'));
+        }))
+      : el('p', { class: 'empty', style: 'margin:0' }, 'Noch keine Themengebiete.'),
+    el('form', { class: 'add-topic', onsubmit: (ev) => {
+        ev.preventDefault();
+        const name = input.value.trim();
+        if (!name) return;
+        exam.topics.push({ id: uid(), name, done: false });
+        commit();
+        document.getElementById(`new-topic-${exam.id}`)?.focus();
+      } },
+      input, el('button', { type: 'submit', class: 'btn small' }, '+ Thema')));
+}
+
+// ---------- Noten ----------
+
+const NOTE_FOR_POINTS = ['6', '5-', '5', '5+', '4-', '4', '4+', '3-', '3', '3+', '2-', '2', '2+', '1-', '1', '1+'];
+
+function weightedAverage(grades) {
+  const w = grades.reduce((a, g) => a + g.weight, 0);
+  return grades.reduce((a, g) => a + g.points * g.weight, 0) / w;
+}
+function fmtAvg(avg) { return avg.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+function noteFor(points) { return NOTE_FOR_POINTS[Math.max(0, Math.min(15, Math.round(points)))]; }
+function gradeClass(p) { return p >= 10 ? 'grade g-good' : p >= 5 ? 'grade' : 'grade g-bad'; }
+
+function renderGrades() {
+  const bySubject = {};
+  for (const g of state.grades) (bySubject[g.subject] ||= []).push(g);
+  const subjects = Object.keys(bySubject).sort((a, b) => a.localeCompare(b, 'de'));
+  const hero = document.getElementById('grade-hero');
+  const sub = document.getElementById('grade-sub');
+  const list = document.getElementById('grade-list');
+  if (!subjects.length) {
+    hero.replaceChildren('–');
+    sub.replaceChildren(el('span', { class: 'ctx' }, 'Noch keine Noten eingetragen.'));
+    list.replaceChildren();
+    return;
+  }
+  // Gesamtschnitt = Durchschnitt der Fächer-Schnitte
+  const avg = subjects.reduce((a, s) => a + weightedAverage(bySubject[s]), 0) / subjects.length;
+  hero.replaceChildren(fmtAvg(avg), el('span', { class: 'unit' }, `Punkte · Note ${noteFor(avg)}`));
+  sub.replaceChildren(el('span', { class: 'ctx' },
+    `${state.grades.length} ${state.grades.length === 1 ? 'Note' : 'Noten'} in ${subjects.length} ${subjects.length === 1 ? 'Fach' : 'Fächern'}`));
+
+  list.replaceChildren(...subjects.map((subject) => {
+    const grades = [...bySubject[subject]].sort((a, b) => b.date.localeCompare(a.date));
+    const sAvg = weightedAverage(grades);
+    return el('div', { class: 'section', style: 'margin-bottom:24px' },
+      el('div', { class: 'section-head' }, el('h2', {}, subject), el('span', { class: 'row-title' }, `Ø ${fmtAvg(sAvg)} P. · ${noteFor(sAvg)}`)),
+      ...grades.map((g) => el('div', { class: 'row-item' },
+        el('div', { class: gradeClass(g.points) }, String(g.points)),
+        el('div', { class: 'row-main' },
+          el('div', { class: 'row-title' }, `${g.type}${g.weight > 1 ? ' · doppelt' : ''} · ${g.points === 1 ? '1 Punkt' : g.points + ' Punkte'} (Note ${noteFor(g.points)})`),
+          el('div', { class: 'row-sub' }, fmtDate(g.date, { day: 'numeric', month: 'long', year: 'numeric' }) + (g.note ? ` · ${g.note}` : ''))),
+        el('button', { class: 'icon-btn', title: 'Note löschen', 'aria-label': 'Note löschen',
+          onclick: () => { state.grades = state.grades.filter((x) => x.id !== g.id); commit(); } }, '✕'))));
+  }));
+}
+
+// ---------- Rendern & Aktionen ----------
+
+function render() {
+  document.getElementById('example-banner').hidden = !state.example;
+  const subjects = new Set([...state.sessions, ...state.exams, ...state.grades].map((x) => x.subject));
+  document.getElementById('subject-list').replaceChildren(...[...subjects].sort().map((s) => el('option', { value: s })));
+  renderHome();
+  renderSessions();
+  renderExams();
+  renderGrades();
+  renderStats();
+}
+
+function commit() {
+  saveData();
+  render();
+  if (!storageOk && !cloud.ref) setStatus('Speichern ist hier nicht möglich. Sichere deine Daten über „Daten kopieren“.', true);
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('main > .panel').forEach((p) => { p.hidden = p.id !== name; });
+  try { localStorage.setItem(STORAGE_KEY + '-tab', name); } catch (e) {}
+  window.scrollTo(0, 0);
+  render(); // Charts brauchen die sichtbare Breite
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.goto)));
+
+document.getElementById('session-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const subject = document.getElementById('session-subject').value.trim();
+  const date = document.getElementById('session-date').value;
+  const h = parseFloat(document.getElementById('session-hours').value);
+  const note = document.getElementById('session-note').value.trim();
+  if (!subject || !date || !(h > 0)) return;
+  state.sessions.push({ id: uid(), subject, date, hours: h, note });
+  markReal();
+  commit();
+  document.getElementById('session-hours').value = '';
+  document.getElementById('session-note').value = '';
+});
+
+document.getElementById('exam-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const subject = document.getElementById('exam-subject').value.trim();
+  const date = document.getElementById('exam-date').value;
+  const title = document.getElementById('exam-title').value.trim();
+  const topics = document.getElementById('exam-topics').value
+    .split('\n').map((t) => t.trim()).filter(Boolean).map((name) => ({ id: uid(), name, done: false }));
+  if (!subject || !date) return;
+  state.exams.push({ id: uid(), subject, date, title, topics });
+  markReal();
+  commit();
+  ev.target.reset();
+  document.getElementById('exam-add').open = false;
+});
+
+document.getElementById('grade-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const subject = document.getElementById('grade-subject').value.trim();
+  const select = document.getElementById('grade-value');
+  const date = document.getElementById('grade-date').value;
+  if (!subject || !select.value || !date) return;
+  state.grades.push({
+    id: uid(), subject, date,
+    points: parseInt(select.value, 10),
+    type: document.getElementById('grade-type').value,
+    weight: parseInt(document.getElementById('grade-weight').value, 10),
+    note: document.getElementById('grade-note').value.trim(),
+  });
+  markReal();
+  commit();
+  select.value = '';
+  document.getElementById('grade-note').value = '';
+});
+
+// Ziele
+const goalForm = document.getElementById('goal-form');
+function updateSubjectGoalSum() {
+  const inputs = [...document.querySelectorAll('#subject-goal-inputs input')];
+  const sum = inputs.reduce((a, i) => a + parseFloat(i.value), 0);
+  const week = parseFloat(document.getElementById('goal-week').value) || 0;
+  document.getElementById('subject-goal-sum').textContent = inputs.length
+    ? `Summe der Fächer: ${hours(sum)}` + (sum > week ? ` · mehr als dein Gesamtziel von ${hours(week)}` : '')
+    : 'Trage zuerst eine Arbeit ein, dann kannst du hier ein Ziel für das Fach setzen.';
+}
+document.getElementById('goal-week').addEventListener('input', updateSubjectGoalSum);
+document.getElementById('edit-goals').addEventListener('click', () => {
+  document.getElementById('goal-week').value = state.goals.week;
+  document.getElementById('goal-month').value = state.goals.month;
+  document.getElementById('subject-goal-inputs').replaceChildren(...goalSubjects().map((subject, i) => {
+    const val = el('span', { class: 'val' }, hours(state.goals.subjects[subject] || 0));
+    const input = el('input', { type: 'range', id: `subject-goal-${i}`, min: 0, max: 40, step: 0.5,
+      value: state.goals.subjects[subject] || 0, 'data-subject': subject, 'aria-label': `Wochenziel ${subject}`,
+      oninput: (ev) => { val.textContent = hours(parseFloat(ev.target.value)); updateSubjectGoalSum(); } });
+    return el('div', { class: 'slider-row' }, el('span', { class: 'row-title' }, subject), input, val);
+  }));
+  updateSubjectGoalSum();
+  goalForm.hidden = false;
+  document.getElementById('goal-week').focus();
+});
+document.getElementById('cancel-goals').addEventListener('click', () => { goalForm.hidden = true; });
+goalForm.addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const week = parseFloat(document.getElementById('goal-week').value);
+  const month = parseFloat(document.getElementById('goal-month').value);
+  if (!(week > 0) || !(month > 0)) return;
+  markReal();
+  const subjects = { ...state.goals.subjects };
+  document.querySelectorAll('#subject-goal-inputs input').forEach((i) => { subjects[i.dataset.subject] = parseFloat(i.value); });
+  state.goals = { week, month, subjects };
+  goalForm.hidden = true;
+  commit();
+});
+
+// Zeitraum der Tagesstatistik
+document.querySelectorAll('#period-seg button').forEach((b) => b.addEventListener('click', () => {
+  ui.mode = b.dataset.mode;
+  ui.offset = 0;
+  renderStats();
+}));
+document.getElementById('period-prev').addEventListener('click', () => { ui.offset--; renderStats(); });
+document.getElementById('period-next').addEventListener('click', () => { if (ui.offset < 0) { ui.offset++; renderStats(); } });
+
+document.getElementById('clear-examples').addEventListener('click', () => {
+  state.sessions = [];
+  state.exams = [];
+  state.grades = [];
+  state.example = false;
+  commit();
+});
+
+// Datensicherung
+const backupText = document.getElementById('backup-text');
+function setStatus(msg, isError = false) {
+  const s = document.getElementById('backup-status');
+  s.textContent = msg;
+  s.classList.toggle('error', isError);
+  if (isError) document.getElementById('backup').open = true;
+}
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const json = JSON.stringify({ goals: state.goals, sessions: state.sessions, exams: state.exams, grades: state.grades });
+  backupText.value = json;
+  const fallback = () => { backupText.focus(); backupText.select(); setStatus('Text markiert. Jetzt kopieren und z. B. in einer Notiz speichern.'); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(json).then(() => setStatus('In die Zwischenablage kopiert.'), fallback);
+  else fallback();
+});
+function importJSON(text) {
+  try {
+    const d = JSON.parse(text);
+    if (!Array.isArray(d.sessions) || !Array.isArray(d.exams)) throw new Error();
+    state.sessions = d.sessions;
+    state.exams = d.exams;
+    state.grades = (Array.isArray(d.grades) ? d.grades : []).map(normalizeGrade);
+    if (d.goals) state.goals = normalizeGoals({ ...state.goals, ...d.goals });
+    state.example = false;
+    commit();
+    setStatus(`Übernommen: ${d.sessions.length} Lerneinheiten, ${d.exams.length} Arbeiten, ${state.grades.length} Noten.`);
+  } catch (e) {
+    setStatus('Das ist keine gültige Lernplan-Sicherung. Bitte den kompletten kopierten Text einfügen.', true);
+  }
+}
+document.getElementById('import-btn').addEventListener('click', () => {
+  if (!backupText.value.trim()) { setStatus('Füge zuerst eine Sicherung in das Textfeld ein.', true); return; }
+  importJSON(backupText.value);
+});
+document.getElementById('import-file').addEventListener('change', async (ev) => {
+  const file = ev.target.files[0];
+  if (file) importJSON(await file.text());
+  ev.target.value = '';
+});
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { renderHome(); renderStats(); }, 120);
+});
+
+// Start
+document.getElementById('grade-value').replaceChildren(
+  el('option', { value: '' }, 'Bitte wählen'),
+  ...Array.from({ length: 16 }, (_, i) => 15 - i).map((p) => el('option', { value: p }, `${p} Punkte (Note ${noteFor(p)})`)));
+document.getElementById('session-date').value = todayISO();
+document.getElementById('grade-date').value = todayISO();
+if (state.sessions.length) document.getElementById('session-add').open = false;
+let startTab = 'uebersicht';
+try { startTab = localStorage.getItem(STORAGE_KEY + '-tab') || 'uebersicht'; } catch (e) {}
+if (!document.getElementById(startTab)) startTab = 'uebersicht';
+showTab(startTab);
+initCloud();
+</script>

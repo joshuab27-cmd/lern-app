@@ -14,3 +14,9 @@ Eine kleine Web-App, um den Lern-Tagesablauf zu tracken.
 
 Einfach `index.html` im Browser öffnen – keine Installation nötig.
 Die Daten werden lokal im Browser (localStorage) gespeichert.
+
+## Neue Version (`lernplan.html`)
+
+`lernplan.html` ist die aktuelle, erweiterte Version als einzelne Datei:
+Wochen-, Monats- und Fachziele, Statistik mit Stunden pro Tag, Noten in Punkten (0–15).
+Als Web-Seite auf claude.ai speichert sie die Daten im eigenen Konto; lokal geöffnet im Browser.
