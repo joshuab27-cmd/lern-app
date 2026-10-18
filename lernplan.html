@@ -651,7 +651,8 @@ async function pushCloud() {
 }
 
 function applyRemote(data) {
-  Object.assign(state, normalizeState(data));
+  // Daten aus dem Konto kommen schreibgeschützt an: eine bearbeitbare Kopie anlegen
+  Object.assign(state, normalizeState(JSON.parse(JSON.stringify(data))));
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   render();
 }
@@ -1211,6 +1212,14 @@ function renderGrades() {
 }
 
 // ---------- Rendern & Aktionen ----------
+
+// Unerwartete Fehler sichtbar machen statt still zu scheitern
+window.addEventListener('error', (ev) => {
+  setSync('error', 'Fehler: ' + (ev.message || 'unbekannt') + ' – bitte Seite neu laden.');
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  setSync('error', 'Fehler: ' + ((ev.reason && ev.reason.message) || 'unbekannt') + ' – bitte Seite neu laden.');
+});
 
 function formMsg(formId, text, kind = 'error') {
   const node = document.getElementById(formId + '-msg');
